@@ -2,7 +2,7 @@
 
 - **Team Name**: Toan & Dang
 - **Team Members**: Nguyễn Thanh Toàn (2A202600633), Nguyễn Nhựt Đăng (2A202600602)
-- **Deployment Date**: 2026-06-02
+- **Deployment Date**: 01-06-2026
 
 ---
 
