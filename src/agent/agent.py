@@ -344,12 +344,67 @@ class ReActAgent:
                 
         timeout_msg = "Failed to reach a Final Answer within the maximum steps limit."
         logger.log_event("AGENT_END", {"steps": steps, "status": "timeout"})
-        
+
+        if self.max_steps > 3:
+            limit_prompt = (
+                "Observation: You have reached the maximum number of reasoning steps "
+                f"({self.max_steps}). You must provide a Final Answer now and explicitly "
+                "state that the limit was reached."
+            )
+            self.history.append({"role": "user", "content": limit_prompt})
+            history_str += f"{limit_prompt}\n"
+
+            try:
+                response = self.llm.generate(history_str, system_prompt=self.get_system_prompt())
+
+                if isinstance(response, dict):
+                    content = response.get("content", "").strip()
+                    usage = response.get("usage", {})
+                    latency_ms = response.get("latency_ms", 0)
+                    provider = response.get("provider", "")
+                else:
+                    content = str(response).strip()
+                    usage = {
+                        "prompt_tokens": len(history_str) // 4,
+                        "completion_tokens": len(content) // 4,
+                        "total_tokens": (len(history_str) + len(content)) // 4
+                    }
+                    latency_ms = 0
+                    provider = "mimo"
+
+                from src.telemetry.metrics import tracker
+                tracker.track_request(
+                    provider=provider,
+                    model=self.llm.model_name,
+                    usage=usage,
+                    latency_ms=latency_ms
+                )
+
+                self.history.append({"role": "assistant", "content": content})
+                history_str += content + "\n"
+
+                final_match = re.search(r"Final\s*Answer\s*:\s*(.*)", content, re.DOTALL | re.IGNORECASE)
+                if final_match:
+                    final_answer = final_match.group(1).strip()
+                    logger.log_event("AGENT_END", {"steps": steps, "status": "forced_completion"})
+                    return self._store_conversation_turn(user_input, final_answer)
+
+                forced_reply = f"{timeout_msg} Limit reached ({self.max_steps}). {content}"
+                logger.log_event("AGENT_END", {"steps": steps, "status": "forced_completion"})
+                return self._store_conversation_turn(user_input, forced_reply)
+            except Exception as e:
+                error_msg = (
+                    f"{timeout_msg} Limit reached ({self.max_steps}). "
+                    f"System error during final forced response: {str(e)}"
+                )
+                logger.log_event("AGENT_ERROR", {"error": str(e)})
+                return self._store_conversation_turn(user_input, error_msg)
+
         # Attempt to rescue the run by extracting any final answer found in history
         rescue_match = re.search(r"Final\s*Answer\s*:\s*(.*)", history_str, re.DOTALL | re.IGNORECASE)
         if rescue_match:
             return self._store_conversation_turn(user_input, rescue_match.group(1).strip())
-            
+
         return self._store_conversation_turn(user_input, timeout_msg)
 
     def _execute_tool(self, tool_name: str, args: Any) -> Any:
