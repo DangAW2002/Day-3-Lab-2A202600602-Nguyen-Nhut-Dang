@@ -27,10 +27,33 @@ class PerformanceTracker:
 
     def _calculate_cost(self, model: str, usage: Dict[str, int]) -> float:
         """
-        TODO: Implement real pricing logic.
-        For now, returns a dummy constant.
+        Implement real pricing logic based on standard model pricing.
         """
-        return (usage.get("total_tokens", 0) / 1000) * 0.01
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        
+        model_lower = model.lower()
+        if "gemini" in model_lower:
+            # Gemini 1.5 Flash pricing: $0.075/1M input, $0.30/1M output
+            input_rate = 0.075 / 1_000_000
+            output_rate = 0.30 / 1_000_000
+        elif "gpt-4o-mini" in model_lower:
+            # GPT-4o-mini pricing: $0.150/1M input, $0.600/1M output
+            input_rate = 0.150 / 1_000_000
+            output_rate = 0.600 / 1_000_000
+        elif "gpt-4o" in model_lower:
+            # GPT-4o pricing: $5.00/1M input, $15.00/1M output
+            input_rate = 5.00 / 1_000_000
+            output_rate = 15.00 / 1_000_000
+        elif "local" in model_lower or "phi" in model_lower or model_lower.endswith(".gguf"):
+            # Local offline models are free to run
+            return 0.0
+        else:
+            # Fallback estimation
+            input_rate = 0.150 / 1_000_000
+            output_rate = 0.600 / 1_000_000
+            
+        return (prompt_tokens * input_rate) + (completion_tokens * output_rate)
 
 # Global tracker instance
 tracker = PerformanceTracker()
