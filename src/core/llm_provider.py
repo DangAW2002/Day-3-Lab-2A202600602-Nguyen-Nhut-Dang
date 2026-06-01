@@ -13,7 +13,12 @@ class LLMProvider(ABC):
         self.api_key = api_key
 
     @abstractmethod
-    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    def generate(
+        self, 
+        prompt: str, 
+        system_prompt: Optional[str] = None, 
+        stop: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         Produce a non-streaming completion.
         Returns:
@@ -25,6 +30,11 @@ class LLMProvider(ABC):
         pass
 
     @abstractmethod
-    def stream(self, prompt: str, system_prompt: Optional[str] = None) -> Generator[str, None, None]:
-        """Produce a streaming completion."""
+    def stream(
+        self, 
+        prompt: str, 
+        system_prompt: Optional[str] = None, 
+        stop: Optional[List[str]] = None
+    ) -> Generator[Dict[str, Any], None, None]:
+        """Produce a streaming completion yielding dicts of reasoning and content."""
         pass

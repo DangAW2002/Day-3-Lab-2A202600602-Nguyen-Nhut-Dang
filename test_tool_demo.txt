@@ -1,0 +1,1 @@
+Đây là file test được tạo bởi Agent ReAct.\nNgày tạo: 2025\nMục đích: Demo công cụ write_file

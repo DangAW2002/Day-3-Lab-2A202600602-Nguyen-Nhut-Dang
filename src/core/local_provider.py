@@ -1,7 +1,6 @@
 import time
 import os
-from typing import Dict, Any, Optional, Generator
-from llama_cpp import Llama
+from typing import Dict, Any, Optional, Generator, List
 from src.core.llm_provider import LLMProvider
 
 class LocalProvider(LLMProvider):
@@ -22,6 +21,14 @@ class LocalProvider(LLMProvider):
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}. Please download it first.")
 
+        try:
+            from llama_cpp import Llama
+        except ImportError as e:
+            raise ImportError(
+                "Không thể tìm thấy thư viện 'llama-cpp-python'. "
+                "Vui lòng chạy lệnh 'pip install llama-cpp-python' trong môi trường conda để sử dụng local provider."
+            ) from e
+
         # n_threads=None will use all available cores
         self.llm = Llama(
             model_path=model_path,
@@ -30,7 +37,12 @@ class LocalProvider(LLMProvider):
             verbose=False
         )
 
-    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    def generate(
+        self, 
+        prompt: str, 
+        system_prompt: Optional[str] = None, 
+        stop: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         start_time = time.time()
         
         # Phi-3 / Llama-3 style formatting if not handled by a template
@@ -40,10 +52,12 @@ class LocalProvider(LLMProvider):
         else:
             full_prompt = f"<|user|>\n{prompt}<|end|>\n<|assistant|>"
 
+        stop_words = stop or ["<|end|>", "Observation:", "System/Observation:"]
+
         response = self.llm(
             full_prompt,
             max_tokens=1024,
-            stop=["<|end|>", "Observation:"],
+            stop=stop_words,
             echo=False
         )
 
@@ -64,21 +78,28 @@ class LocalProvider(LLMProvider):
             "provider": "local"
         }
 
-    def stream(self, prompt: str, system_prompt: Optional[str] = None) -> Generator[str, None, None]:
+    def stream(
+        self, 
+        prompt: str, 
+        system_prompt: Optional[str] = None, 
+        stop: Optional[List[str]] = None
+    ) -> Generator[Dict[str, Any], None, None]:
         full_prompt = prompt
         if system_prompt:
             full_prompt = f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{prompt}<|end|>\n<|assistant|>"
         else:
             full_prompt = f"<|user|>\n{prompt}<|end|>\n<|assistant|>"
 
+        stop_words = stop or ["<|end|>", "Observation:", "System/Observation:"]
+
         stream = self.llm(
             full_prompt,
             max_tokens=1024,
-            stop=["<|end|>", "Observation:"],
+            stop=stop_words,
             stream=True
         )
 
         for chunk in stream:
             token = chunk["choices"][0]["text"]
             if token:
-                yield token
+                yield {"type": "content", "content": token}

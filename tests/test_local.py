@@ -27,7 +27,7 @@ def test_local_phi3():
         print("Assistant: ", end="", flush=True)
         
         for chunk in provider.stream(prompt):
-            print(chunk, end="", flush=True)
+            print(chunk["content"], end="", flush=True)
         print("\n\n✅ Local Provider is working correctly!")
         
     except Exception as e:

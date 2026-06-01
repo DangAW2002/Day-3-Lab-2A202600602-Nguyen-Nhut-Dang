@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Any, Optional, Generator
+from typing import Dict, Any, Optional, Generator, List
 from openai import OpenAI
 from src.core.llm_provider import LLMProvider
 
@@ -8,7 +8,12 @@ class OpenAIProvider(LLMProvider):
         super().__init__(model_name, api_key)
         self.client = OpenAI(api_key=self.api_key)
 
-    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    def generate(
+        self, 
+        prompt: str, 
+        system_prompt: Optional[str] = None, 
+        stop: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         start_time = time.time()
         
         messages = []
@@ -19,6 +24,7 @@ class OpenAIProvider(LLMProvider):
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
+            stop=stop
         )
 
         end_time = time.time()
@@ -39,7 +45,12 @@ class OpenAIProvider(LLMProvider):
             "provider": "openai"
         }
 
-    def stream(self, prompt: str, system_prompt: Optional[str] = None) -> Generator[str, None, None]:
+    def stream(
+        self, 
+        prompt: str, 
+        system_prompt: Optional[str] = None, 
+        stop: Optional[List[str]] = None
+    ) -> Generator[Dict[str, Any], None, None]:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -48,9 +59,21 @@ class OpenAIProvider(LLMProvider):
         stream = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            stream=True
+            stream=True,
+            stop=stop
         )
 
         for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+            # Safely check reasoning_content (for newer models like o1/o3-mini supporting it)
+            reasoning_content = None
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta
+                reasoning_content = getattr(delta, "reasoning_content", None)
+                if not reasoning_content and hasattr(delta, "model_extra") and delta.model_extra:
+                    reasoning_content = delta.model_extra.get("reasoning_content")
+                    
+            if reasoning_content:
+                yield {"type": "reasoning", "content": reasoning_content}
+                
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield {"type": "content", "content": chunk.choices[0].delta.content}

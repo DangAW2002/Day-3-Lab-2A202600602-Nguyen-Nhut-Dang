@@ -1,0 +1,35 @@
+{
+  "calculate_factorial": {
+    "description": "Tính giai thừa của một số nguyên không âm n. Trả về n! dưới dạng số nguyên. Chấp nhận tham số 'n' hoặc 'query'.",
+    "arguments": {
+      "n": {
+        "type": "int",
+        "description": "Số nguyên không âm cần tính giai thừa"
+      },
+      "query": {
+        "type": "int",
+        "description": "Tham số thay thế cho n"
+      }
+    },
+    "file_path": "src/tools/dynamic/calculate_factorial.py"
+  },
+  "check_time": {
+    "description": "Kiểm tra thời gian hiện tại. Trả về giờ, phút, giây, ngày tháng năm và múi giờ. Sử dụng khi người dùng muốn biết thời gian hiện tại.",
+    "arguments": {},
+    "file_path": "src/tools/dynamic/check_time.py"
+  },
+  "get_weather": {
+    "description": "Lấy thông tin thời tiết hiện tại cho một thành phố bất kỳ trên thế giới. Sử dụng API wttr.in miễn phí, không cần API key. Trả về nhiệt độ, độ ẩm, gió, mô tả thời tiết, thời gian bình minh/hoàng hôn... Sử dụng khi người dùng hỏi về thời tiết, khí hậu, nhiệt độ của một địa phương.",
+    "arguments": {
+      "city": {
+        "type": "str",
+        "description": "Tên thành phố cần xem thời tiết (ví dụ: 'Hanoi', 'Ho Chi Minh', 'Tokyo', 'New York')"
+      },
+      "format_type": {
+        "type": "str",
+        "description": "Kiểu hiển thị: 'text' (mặc định, dễ đọc), 'compact' (ngắn gọn), 'json' (chi tiết đầy đủ)"
+      }
+    },
+    "file_path": "src/tools/dynamic/get_weather.py"
+  }
+}
